@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Jeu de Noël 🎄</title>
+    <style>
+      :root {
+        --red: #b11226;
+        --green: #0f5132;
+        --gold: #d4af37;
+        --white: #fff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, #1a2a3a, #0b1c26);
+        color: var(--white);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        overflow-x: hidden;
+        position: relative;
+      }
+      h1,
+      h2 {
+        text-align: center;
+        margin: 15px 0;
+      }
+      h2 {
+        font-weight: 600;
+      }
+
+      #game {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(90px, 1fr));
+        gap: 14px;
+        width: 90%;
+        max-width: 360px;
+        margin-top: 30px;
+      }
+      .card {
+        aspect-ratio: 2/3;
+        perspective: 1000px;
+      }
+      .card-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 18px;
+        transform-style: preserve-3d;
+        transition: transform 0.6s ease;
+        cursor: pointer;
+      }
+      .card.flipped .card-inner {
+        transform: rotateY(180deg);
+      }
+      .card.matched .card-inner {
+        box-shadow: 0 0 0 3px var(--gold), 0 0 25px var(--gold);
+      }
+      .card-face {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        backface-visibility: hidden;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .card-front {
+        background: linear-gradient(135deg, var(--red), #7a0d1b);
+        font-size: 36px;
+      }
+      .card-front::after {
+        content: "🎄";
+      }
+      .card-back {
+        transform: rotateY(180deg);
+      }
+      .card-back img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* Scenes */
+      .scene {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 5;
+        text-align: center;
+      }
+      .scene.active {
+        display: flex;
+      }
+
+      /* Confettis */
+      .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        top: -10px;
+        animation: fall linear forwards;
+        z-index: 50;
+      }
+      @keyframes fall {
+        to {
+          transform: translateY(110vh) rotate(360deg);
+        }
+      }
+      /* pop animation */
+      @keyframes pop {
+        0% {
+          transform: scale(0.7);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* Countdown coeur */
+      #countdown {
+        font-size: 64px;
+        font-weight: bold;
+        color: var(--gold);
+        animation: heartbeat 0.6s ease infinite;
+      }
+      @keyframes heartbeat {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.3);
+        }
+      }
+
+      /* Snow */
+      .snowflake {
+        position: fixed;
+        top: -10px;
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        opacity: 0.8;
+        pointer-events: none;
+        animation: fall linear forwards;
+        z-index: 60;
+      }
+
+      /* Button that moves */
+      #fleeBtn {
+        padding: 15px 30px;
+        font-size: 24px;
+        border: none;
+        border-radius: 12px;
+        background: var(--gold);
+        color: #000;
+        font-weight: 600;
+        cursor: pointer;
+        position: absolute;
+        transition: transform 0.1s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Scene 1: Memory Game -->
+    <div id="sceneMemory" class="scene active">
+      <h2>Retrouve toutes les paires 🎁</h1>
+      <div id="game"></div>
+    </div>
+
+    <!-- Scene 2: Bien joué -->
+    <div id="sceneCongrats" class="scene">
+      <h2>Bien joué !</h2>
+      <p>Mais tu croyais quand même pas que ça allait être si simple...</p>
+      <button id="next1">Continuer</button>
+    </div>
+
+    <!-- Scene 3: Bouton qui fuit -->
+    <div id="sceneFlee" class="scene">
+      <h2>Attrape le bouton 🎄</h2>
+      <button id="fleeBtn">🎁 OUVRIR</button>
+    </div>
+
+    <!-- Scene 4: Père Noël impatient -->
+    <div id="sceneSanta" class="scene">
+      <h2>Le Père Noël est impatient…</h2>
+      <button id="santaBtn">Ne touche à rien !</button>
+    </div>
+
+    <!-- Scene 5: Faux choix -->
+    <div id="sceneChoice" class="scene">
+      <h2>Tu es sûr(e) d'être prêt(e) ?</h2>
+      <div>
+        <button class="choiceBtn">Oui</button>
+        <button class="choiceBtn">Oui vraiment</button>
+        <button class="choiceBtn">Oui absolument</button>
+      </div>
+    </div>
+
+    <!-- Scene 6: Countdown -->
+    <div id="sceneCountdown" class="scene">
+      <h2>Le cadeau arrive… 🎄</h2>
+      <div id="countdown">3</div>
+    </div>
+
+    <!-- Scene 7: Cadeau -->
+    <div id="sceneWinner" class="scene">
+      <h2>Joyeux Noël 🎉</h2>
+      <img src="cadeau.jpg" alt="Cadeau" id="finalGift" />
+    </div>
+
+    <script>
+      // ---------- Snow ----------
+      function snow() {
+        const flake = document.createElement("div");
+        flake.className = "snowflake";
+        flake.style.left = Math.random() * 100 + "vw";
+        flake.style.width = flake.style.height = Math.random() * 5 + 4 + "px";
+        flake.style.animationDuration = Math.random() * 3 + 3 + "s";
+        document.body.appendChild(flake);
+        setTimeout(() => flake.remove(), 6000);
+      }
+      setInterval(snow, 150);
+
+      // ---------- Memory Game ----------
+      const images = [
+        "image1.jpg",
+        "image2.jpg",
+        "image3.jpeg",
+        "image4.jpeg",
+        "image5.jpeg",
+        "image6.jpeg",
+      ];
+      let cards = [...images, ...images].sort(() => Math.random() - 0.5);
+      const game = document.getElementById("game");
+      let first = null,
+        lock = false,
+        pairs = 0;
+
+      cards.forEach((src) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `<div class="card-inner">
+    <div class="card-face card-front"></div>
+    <div class="card-face card-back"><img src="${src}"></div>
+  </div>`;
+        card.addEventListener("click", () => flip(card, src));
+        game.appendChild(card);
+      });
+
+      function flip(card, src) {
+        if (lock || card === first || card.classList.contains("matched"))
+          return;
+        card.classList.add("flipped");
+        if (!first) {
+          first = { card, src };
+          return;
+        }
+        lock = true;
+        if (first.src === src) {
+          card.classList.add("matched");
+          first.card.classList.add("matched");
+          pairs++;
+          reset();
+          if (pairs === images.length) nextScene("sceneCongrats");
+        } else {
+          setTimeout(() => {
+            card.classList.remove("flipped");
+            first.card.classList.remove("flipped");
+            reset();
+          }, 900);
+        }
+      }
+      function reset() {
+        first = null;
+        lock = false;
+      }
+
+      // ---------- Scene Transitions ----------
+      function nextScene(id) {
+        document
+          .querySelectorAll(".scene")
+          .forEach((s) => s.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+      }
+
+      // Scene 2 button
+      document
+        .getElementById("next1")
+        .addEventListener("click", () => nextScene("sceneFlee"));
+
+      // ---------- Scene 3: Bouton qui fuit amélioré ----------
+      const fleeBtn = document.getElementById("fleeBtn");
+      let fleeInterval;
+      fleeBtn.addEventListener("mouseenter", startFlee);
+      fleeBtn.addEventListener("click", () => {
+        clearInterval(fleeInterval);
+        nextScene("sceneSanta");
+      });
+
+      function startFlee() {
+        clearInterval(fleeInterval);
+        fleeInterval = setInterval(() => {
+          let x = Math.random() * window.innerWidth - 80;
+          let y = Math.random() * window.innerHeight - 80;
+          fleeBtn.style.transform = `translate(${x}px, ${y}px)`;
+        }, 100);
+      }
+
+      // ---------- Scene 4: Père Noël impatient ----------
+      const santaBtn = document.getElementById("santaBtn");
+      santaBtn.addEventListener("click", () => nextScene("sceneChoice"));
+
+      // ---------- Scene 5: Faux choix ----------
+      document
+        .querySelectorAll(".choiceBtn")
+        .forEach((btn) =>
+          btn.addEventListener("click", () => nextScene("sceneCountdown"))
+        );
+
+      // ---------- Scene 6: Countdown ----------
+      const countdownEl = document.getElementById("countdown");
+      let count = 3;
+      function runCountdown() {
+        countdownEl.textContent = count;
+        const interval = setInterval(() => {
+          count--;
+          countdownEl.textContent = count;
+          if (count === 0) {
+            clearInterval(interval);
+            nextScene("sceneWinner");
+            launchConfetti(150);
+          }
+        }, 1000);
+      }
+      document
+        .getElementById("sceneCountdown")
+        .addEventListener("transitionend", runCountdown);
+
+      // ---------- Confetti ----------
+      function launchConfetti(count) {
+        for (let i = 0; i < count; i++) {
+          const c = document.createElement("div");
+          c.className = "confetti";
+          c.style.left = Math.random() * 100 + "vw";
+          c.style.backgroundColor = ["#b11226", "#0f5132", "#d4af37"][
+            Math.floor(Math.random() * 3)
+          ];
+          c.style.width = c.style.height = Math.random() * 8 + 6 + "px";
+          c.style.animationDuration = Math.random() * 2 + 3 + "s";
+          document.body.appendChild(c);
+          setTimeout(() => c.remove(), 5000);
+        }
+      }
+    </script>
+  </body>
+</html>
