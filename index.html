@@ -2,8 +2,17 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <title>Mini Jeu de Noël 🎄</title>
+
     <style>
       :root {
         --red: #b11226;
@@ -17,45 +26,75 @@
       body {
         margin: 0;
         min-height: 100vh;
+        min-height: 100dvh; /* Dynamic viewport height for mobile */
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: radial-gradient(circle at top, #1a2a3a, #0b1c26);
         color: var(--white);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        overflow-x: hidden;
-        position: relative;
-      }
-      h1,
-      h2 {
-        text-align: center;
-        margin: 15px 0;
-      }
-      h2 {
-        font-weight: 600;
+        overflow: hidden;
+        /* Safe area support for iOS */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
       }
 
+      /* Scenes */
+      .scene {
+        display: none;
+        position: fixed;
+        inset: 0;
+        padding: 20px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.8s ease-in-out;
+      }
+      .scene.active {
+        display: flex;
+      }
+      .scene.visible {
+        opacity: 1;
+      }
+
+      /* Intro */
+      #introText {
+        font-size: 22px;
+        max-width: 320px;
+        line-height: 1.6;
+        opacity: 0;
+        filter: blur(10px);
+        transform: scale(0.9);
+        transition: opacity 2s ease-out, filter 2s ease-out,
+          transform 2s ease-out;
+      }
+      #introText.visible {
+        opacity: 1;
+        filter: blur(0px);
+        transform: scale(1);
+      }
+
+      /* Memory */
       #game {
         display: grid;
-        grid-template-columns: repeat(3, minmax(90px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
         gap: 14px;
         width: 90%;
         max-width: 360px;
-        margin-top: 30px;
+        margin-top: 20px;
       }
       .card {
-        aspect-ratio: 2/3;
+        aspect-ratio: 7/9;
         perspective: 1000px;
       }
       .card-inner {
-        position: relative;
         width: 100%;
         height: 100%;
-        border-radius: 18px;
+        position: relative;
         transform-style: preserve-3d;
-        transition: transform 0.6s ease;
-        cursor: pointer;
+        transition: transform 0.6s;
+        border-radius: 18px;
       }
       .card.flipped .card-inner {
         transform: rotateY(180deg);
@@ -68,7 +107,6 @@
         inset: 0;
         border-radius: 18px;
         backface-visibility: hidden;
-        overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -87,58 +125,37 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+        border-radius: 18px;
       }
 
-      /* Scenes */
-      .scene {
-        display: none;
-        flex-direction: column;
+      /* Button flee */
+      #fleeBtn {
+        position: fixed;
+        width: 60px;
+        height: 60px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        transition: transform 0.12s ease-out;
+        z-index: 50;
+        font-size: 50px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        min-height: 100vh;
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 5;
-        text-align: center;
+        filter: drop-shadow(0 4px 15px rgba(177, 18, 38, 0.5));
       }
-      .scene.active {
-        display: flex;
+      #fleeBtn:hover {
+        transform: scale(1.2);
+        filter: drop-shadow(0 6px 20px rgba(177, 18, 38, 0.7));
       }
 
-      /* Confettis */
-      .confetti {
-        position: fixed;
-        width: 10px;
-        height: 10px;
-        top: -10px;
-        animation: fall linear forwards;
-        z-index: 50;
-      }
-      @keyframes fall {
-        to {
-          transform: translateY(110vh) rotate(360deg);
-        }
-      }
-      /* pop animation */
-      @keyframes pop {
-        0% {
-          transform: scale(0.7);
-          opacity: 0;
-        }
-        100% {
-          transform: scale(1);
-          opacity: 1;
-        }
-      }
-
-      /* Countdown coeur */
+      /* Countdown */
       #countdown {
-        font-size: 64px;
+        font-size: 70px;
         font-weight: bold;
         color: var(--gold);
-        animation: heartbeat 0.6s ease infinite;
+        animation: heartbeat 0.6s infinite;
       }
       @keyframes heartbeat {
         0%,
@@ -159,111 +176,679 @@
         background: white;
         border-radius: 50%;
         opacity: 0.8;
-        pointer-events: none;
         animation: fall linear forwards;
-        z-index: 60;
+      }
+      @keyframes fall {
+        to {
+          transform: translateY(110vh);
+        }
       }
 
-      /* Button that moves */
-      #fleeBtn {
-        padding: 15px 30px;
-        font-size: 24px;
+      /* Confetti */
+      .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      @keyframes confettiExplode {
+        0% {
+          transform: translate(0, 0) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(var(--tx), var(--ty)) rotate(720deg);
+          opacity: 0;
+        }
+      }
+
+      /* Congrats overlay */
+      #congratsOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1.2s ease-out;
+      }
+      #congratsOverlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #congratsOverlay h2 {
+        margin: 0 0 20px 0;
+        font-size: 38px;
+        color: var(--gold);
+        text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold);
+        animation: glow 1.5s ease-in-out infinite, slideDown 1s ease-out;
+      }
+      #congratsOverlay p {
+        margin: 0 0 30px 0;
+        font-size: 18px;
+        max-width: 300px;
+        line-height: 1.5;
+        animation: slideDown 1s ease-out 0.2s backwards;
+      }
+      #congratsOverlay button {
+        padding: 18px 45px;
+        font-size: 20px;
         border: none;
-        border-radius: 12px;
-        background: var(--gold);
-        color: #000;
-        font-weight: 600;
+        border-radius: 50px;
+        background: linear-gradient(135deg, var(--red) 0%, #8b0d1a 100%);
+        color: var(--white);
+        font-weight: 700;
         cursor: pointer;
+        box-shadow: 0 6px 25px rgba(177, 18, 38, 0.5), 0 0 0 2px var(--gold);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        animation: slideDown 1s ease-out 0.4s backwards;
+      }
+      #congratsOverlay button::before {
+        content: "🎁 ";
+        font-size: 22px;
+      }
+      #congratsOverlay button::after {
+        content: " ✨";
+        font-size: 18px;
+      }
+      #congratsOverlay button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(177, 18, 38, 0.6), 0 0 0 3px var(--gold),
+          0 0 20px var(--gold);
+      }
+      #congratsOverlay button:active {
+        transform: translateY(-1px) scale(0.98);
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-40px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes glow {
+        0%,
+        100% {
+          text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold);
+        }
+        50% {
+          text-shadow: 0 0 30px var(--gold), 0 0 60px var(--gold),
+            0 0 80px var(--gold);
+        }
+      }
+
+      /* Flee success overlay */
+      #fleeSuccessOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1.2s ease-out;
+      }
+      #fleeSuccessOverlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #fleeSuccessOverlay h2 {
+        margin: 0 0 20px 0;
+        font-size: 38px;
+        color: var(--gold);
+        text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold);
+        animation: glow 1.5s ease-in-out infinite, slideDown 1s ease-out;
+      }
+      #fleeSuccessOverlay p {
+        margin: 0 0 30px 0;
+        font-size: 18px;
+        max-width: 300px;
+        line-height: 1.5;
+        animation: slideDown 1s ease-out 0.2s backwards;
+      }
+
+      /* Santa success overlay */
+      #santaSuccessOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1.2s ease-out;
+      }
+      #santaSuccessOverlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #santaSuccessOverlay h2 {
+        margin: 0 0 20px 0;
+        font-size: 38px;
+        color: var(--gold);
+        text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold);
+        animation: glow 1.5s ease-in-out infinite, slideDown 1s ease-out;
+      }
+      #santaSuccessOverlay p {
+        margin: 0 0 30px 0;
+        font-size: 18px;
+        max-width: 300px;
+        line-height: 1.5;
+        animation: slideDown 1s ease-out 0.2s backwards;
+      }
+      #santaSuccessOverlay button {
+        padding: 18px 45px;
+        font-size: 20px;
+        border: none;
+        border-radius: 50px;
+        background: linear-gradient(135deg, var(--red) 0%, #8b0d1a 100%);
+        color: var(--white);
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 25px rgba(177, 18, 38, 0.5), 0 0 0 2px var(--gold);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        animation: slideDown 1s ease-out 0.4s backwards;
+      }
+      #santaSuccessOverlay button::before {
+        content: "🎁 ";
+        font-size: 22px;
+      }
+      #santaSuccessOverlay button::after {
+        content: " ✨";
+        font-size: 18px;
+      }
+      #santaSuccessOverlay button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(177, 18, 38, 0.6), 0 0 0 3px var(--gold),
+          0 0 20px var(--gold);
+      }
+      #santaSuccessOverlay button:active {
+        transform: translateY(-1px) scale(0.98);
+      }
+
+      /* Santa Progress Bar */
+      #santaProgress {
+        width: 80%;
+        max-width: 350px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        overflow: hidden;
+        border: 2px solid var(--gold);
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        position: relative;
+      }
+      #santaProgressBar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(
+          90deg,
+          var(--red) 0%,
+          var(--green) 50%,
+          var(--gold) 100%
+        );
+        background-size: 200% 100%;
+        animation: progressFill 30s linear forwards, shimmer 3s linear infinite;
+        border-radius: 13px;
+        position: relative;
+        overflow: hidden;
+      }
+      #santaProgressBar::after {
+        content: "🎅";
         position: absolute;
-        transition: transform 0.1s ease;
+        right: -5px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 24px;
+        animation: bounce 0.8s ease-in-out infinite;
+      }
+      @keyframes progressFill {
+        from {
+          width: 0%;
+        }
+        to {
+          width: 100%;
+        }
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 0% 0%;
+        }
+        100% {
+          background-position: 200% 0%;
+        }
+      }
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(-50%);
+        }
+        50% {
+          transform: translateY(-60%);
+        }
+      }
+
+      /* Choice scene buttons */
+      #sceneChoice button:hover {
+        transform: translateY(-3px) scale(1.05);
+        filter: brightness(1.1);
+      }
+      #sceneChoice button:active {
+        transform: translateY(-1px) scale(1.02);
+      }
+
+      /* Winner scene gift animation */
+      #sceneWinner img {
+        opacity: 0;
+        transform: scale(0.8);
+        transition: opacity 2s ease-out, transform 2s ease-out;
+      }
+      #sceneWinner.active img {
+        opacity: 1;
+        transform: scale(1);
       }
     </style>
   </head>
+
   <body>
-    <!-- Scene 1: Memory Game -->
-    <div id="sceneMemory" class="scene active">
-      <h2>Retrouve toutes les paires 🎁</h1>
-      <div id="game"></div>
-    </div>
-
-    <!-- Scene 2: Bien joué -->
-    <div id="sceneCongrats" class="scene">
-      <h2>Bien joué !</h2>
-      <p>Mais tu croyais quand même pas que ça allait être si simple...</p>
-      <button id="next1">Continuer</button>
-    </div>
-
-    <!-- Scene 3: Bouton qui fuit -->
-    <div id="sceneFlee" class="scene">
-      <h2>Attrape le bouton 🎄</h2>
-      <button id="fleeBtn">🎁 OUVRIR</button>
-    </div>
-
-    <!-- Scene 4: Père Noël impatient -->
-    <div id="sceneSanta" class="scene">
-      <h2>Le Père Noël est impatient…</h2>
-      <button id="santaBtn">Ne touche à rien !</button>
-    </div>
-
-    <!-- Scene 5: Faux choix -->
-    <div id="sceneChoice" class="scene">
-      <h2>Tu es sûr(e) d'être prêt(e) ?</h2>
-      <div>
-        <button class="choiceBtn">Oui</button>
-        <button class="choiceBtn">Oui vraiment</button>
-        <button class="choiceBtn">Oui absolument</button>
+    <!-- Intro -->
+    <div id="sceneIntro" class="scene active">
+      <div id="introText">
+        Tu sais bien que ce n'est pas si simple d'avoir un cadeau avec moi...
       </div>
     </div>
 
-    <!-- Scene 6: Countdown -->
+    <!-- Memory -->
+    <div id="sceneMemory" class="scene">
+      <h2>Retrouve toutes les paires 🎁</h2>
+      <div id="game"></div>
+
+      <!-- Congrats overlay -->
+      <div id="congratsOverlay">
+        <h2>✨ Bien joué ! ✨</h2>
+        <p>Mais tu croyais quand même pas que ça allait être si simple...</p>
+        <button onclick="transitionFromOverlay('congratsOverlay', 'sceneFlee')">
+          Continuer
+        </button>
+      </div>
+    </div>
+
+    <!-- Congrats -->
+    <div id="sceneCongrats" class="scene" style="display: none">
+      <h2>Bien joué !</h2>
+      <p>Mais tu croyais quand même pas que ça allait être si simple...</p>
+      <button onclick="nextScene('sceneFlee')">Continuer</button>
+    </div>
+
+    <!-- Flee -->
+    <div id="sceneFlee" class="scene">
+      <h2>Attrape le cadeau</h2>
+      <button id="fleeBtn">🎁</button>
+
+      <!-- Flee success overlay -->
+      <div id="fleeSuccessOverlay">
+        <h2>🎉 Bravo ! 🎉</h2>
+        <p>Tu l'as eu ! Mais ce n'est pas encore fini...</p>
+      </div>
+    </div>
+
+    <!-- Santa -->
+    <div id="sceneSanta" class="scene">
+      <h2>Le Père Noël arrive… 🎅</h2>
+      <div id="santaProgress">
+        <div id="santaProgressBar"></div>
+      </div>
+      <div style="margin-top: 20px; min-height: 60px">
+        <p
+          id="santaMessage1"
+          style="
+            font-size: 18px;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+            margin: 5px 0;
+          "
+        ></p>
+        <p
+          id="santaMessage2"
+          style="
+            font-size: 18px;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+            margin: 5px 0;
+          "
+        ></p>
+      </div>
+
+      <!-- Santa success overlay -->
+      <div id="santaSuccessOverlay">
+        <h2>🎅 Il est arrivé ! 🎅</h2>
+        <p>
+          Mais attention... le Père Noël a quelques questions avant de te donner
+          ton cadeau !
+        </p>
+        <button
+          onclick="transitionFromOverlay('santaSuccessOverlay', 'sceneChoice')"
+        >
+          Oh non...
+        </button>
+      </div>
+    </div>
+
+    <!-- Choice -->
+    <div id="sceneChoice" class="scene">
+      <h2 style="margin-bottom: 15px">❓ Question très importante ❓</h2>
+      <p style="font-size: 18px; margin-bottom: 30px; max-width: 320px">
+        Est-ce que tu mérites vraiment ton cadeau cette année ? 🤔
+      </p>
+      <button
+        onclick="handleChoiceAnswer('sage')"
+        style="
+          margin: 10px;
+          padding: 15px 35px;
+          font-size: 18px;
+          border: none;
+          border-radius: 50px;
+          background: linear-gradient(135deg, var(--green) 0%, #0a3d24 100%);
+          color: var(--white);
+          font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 4px 15px rgba(15, 81, 50, 0.5), 0 0 0 2px var(--gold);
+          transition: all 0.3s ease;
+        "
+      >
+        Évidemment ! 😇
+      </button>
+      <button
+        onclick="handleChoiceAnswer('maybe')"
+        style="
+          margin: 10px;
+          padding: 15px 35px;
+          font-size: 18px;
+          border: none;
+          border-radius: 50px;
+          background: linear-gradient(135deg, var(--red) 0%, #8b0d1a 100%);
+          color: var(--white);
+          font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 4px 15px rgba(177, 18, 38, 0.5), 0 0 0 2px var(--gold);
+          transition: all 0.3s ease;
+        "
+      >
+        Peut-être... 🤷
+      </button>
+      <button
+        onclick="handleChoiceAnswer('gift')"
+        style="
+          margin: 10px;
+          padding: 15px 35px;
+          font-size: 18px;
+          border: none;
+          border-radius: 50px;
+          background: linear-gradient(135deg, var(--gold) 0%, #b8941f 100%);
+          color: #1a2a3a;
+          font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 4px 15px rgba(212, 175, 55, 0.5), 0 0 0 2px var(--white);
+          transition: all 0.3s ease;
+        "
+      >
+        Je veux juste mon cadeau ! 🎁
+      </button>
+
+      <!-- Troll messages -->
+      <div style="margin-top: 30px; min-height: 80px">
+        <p
+          id="trollMessage1"
+          style="
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--gold);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            text-shadow: 0 0 10px var(--gold);
+            margin: 5px 0;
+          "
+        ></p>
+        <p
+          id="trollMessage2"
+          style="
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--gold);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            text-shadow: 0 0 10px var(--gold);
+            margin: 5px 0;
+          "
+        ></p>
+      </div>
+    </div>
+
+    <!-- Countdown -->
     <div id="sceneCountdown" class="scene">
-      <h2>Le cadeau arrive… 🎄</h2>
+      <h2>Le cadeau arrive…</h2>
       <div id="countdown">3</div>
     </div>
 
-    <!-- Scene 7: Cadeau -->
+    <!-- Gift -->
     <div id="sceneWinner" class="scene">
-      <h2>Joyeux Noël 🎉</h2>
-      <img src="cadeau.jpg" alt="Cadeau" id="finalGift" />
+      <h2>Joyeux Noël 🎄</h2>
+      <img
+        src="cadeau.jpeg"
+        style="
+          max-width: 95%;
+          max-height: 70vh;
+          border-radius: 20px;
+          object-fit: contain;
+        "
+      />
     </div>
 
     <script>
       // ---------- Snow ----------
-      function snow() {
-        const flake = document.createElement("div");
-        flake.className = "snowflake";
-        flake.style.left = Math.random() * 100 + "vw";
-        flake.style.width = flake.style.height = Math.random() * 5 + 4 + "px";
-        flake.style.animationDuration = Math.random() * 3 + 3 + "s";
-        document.body.appendChild(flake);
-        setTimeout(() => flake.remove(), 6000);
-      }
-      setInterval(snow, 150);
+      setInterval(() => {
+        const s = document.createElement("div");
+        s.className = "snowflake";
+        s.style.left = Math.random() * 100 + "vw";
+        s.style.animationDuration = Math.random() * 3 + 3 + "s";
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 6000);
+      }, 150);
 
-      // ---------- Memory Game ----------
+      // ---------- Scene helper ----------
+      function nextScene(id, instant = false) {
+        const currentScene = document.querySelector(".scene.active");
+        const nextSceneEl = document.getElementById(id);
+
+        if (instant) {
+          // Transition instantanée (pour l'intro)
+          if (currentScene) currentScene.classList.remove("active", "visible");
+          nextSceneEl.classList.add("active");
+          setTimeout(() => nextSceneEl.classList.add("visible"), 50);
+        } else {
+          // Transition avec fondu
+          if (currentScene) {
+            currentScene.classList.remove("visible");
+            setTimeout(() => {
+              currentScene.classList.remove("active");
+              nextSceneEl.classList.add("active");
+              setTimeout(() => nextSceneEl.classList.add("visible"), 50);
+            }, 800);
+          } else {
+            nextSceneEl.classList.add("active");
+            setTimeout(() => nextSceneEl.classList.add("visible"), 50);
+          }
+        }
+      }
+
+      // ---------- Transition from overlay ----------
+      function transitionFromOverlay(overlayId, nextSceneId) {
+        const overlay = document.getElementById(overlayId);
+        const currentScene = document.querySelector(".scene.active");
+        const nextSceneEl = document.getElementById(nextSceneId);
+
+        // Changer la scène en arrière-plan
+        if (currentScene) currentScene.classList.remove("active", "visible");
+        nextSceneEl.classList.add("active", "visible");
+
+        // Faire disparaître l'overlay en fondu
+        setTimeout(() => {
+          overlay.classList.remove("visible");
+        }, 100);
+      }
+
+      // ---------- Choice troll ----------
+      function handleChoiceAnswer(choice) {
+        const trollMessage1 = document.getElementById("trollMessage1");
+        const trollMessage2 = document.getElementById("trollMessage2");
+        const messages = {
+          sage: "Hmm... Le Père Noël a consulté sa liste... 🤨",
+          maybe: "L'honnêteté, c'est déjà un bon début ! 😏",
+          gift: "Ah ! Quelqu'un d'impatient ici ! 😈",
+        };
+
+        // Disable all buttons
+        const buttons = document.querySelectorAll("#sceneChoice button");
+        buttons.forEach((btn) => (btn.style.pointerEvents = "none"));
+
+        // Show first troll message
+        trollMessage1.textContent = messages[choice];
+        trollMessage1.style.opacity = "1";
+
+        // Wait 2 seconds, then show second troll message below
+        setTimeout(() => {
+          trollMessage2.textContent =
+            "De toute façon... tu auras ton cadeau ! 🎁✨";
+          trollMessage2.style.opacity = "1";
+
+          // Continue to next scene after 2 more seconds
+          setTimeout(() => {
+            trollMessage1.style.opacity = "0";
+            trollMessage2.style.opacity = "0";
+            nextScene("sceneCountdown");
+
+            // Reset for next time
+            setTimeout(() => {
+              buttons.forEach((btn) => (btn.style.pointerEvents = "auto"));
+              trollMessage1.textContent = "";
+              trollMessage2.textContent = "";
+            }, 500);
+          }, 2000);
+        }, 2000);
+      }
+
+      // ---------- Confetti ----------
+      function confetti() {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        for (let i = 0; i < 150; i++) {
+          const c = document.createElement("div");
+          c.className = "confetti";
+
+          // Position au centre
+          c.style.left = centerX + "px";
+          c.style.top = centerY + "px";
+
+          // Couleur aléatoire
+          c.style.background = ["#b11226", "#0f5132", "#d4af37", "#fff"][
+            Math.floor(Math.random() * 4)
+          ];
+
+          // Direction aléatoire (angle en cercle complet)
+          const angle = (Math.PI * 2 * i) / 150 + (Math.random() - 0.5) * 0.5;
+          const velocity = 200 + Math.random() * 400; // Distance variable
+          const tx = Math.cos(angle) * velocity;
+          const ty = Math.sin(angle) * velocity;
+
+          c.style.setProperty("--tx", tx + "px");
+          c.style.setProperty("--ty", ty + "px");
+
+          // Animation avec durée variable
+          const duration = 1 + Math.random() * 1.5;
+          c.style.animation = `confettiExplode ${duration}s ease-out forwards`;
+
+          document.body.appendChild(c);
+          setTimeout(() => c.remove(), duration * 1000);
+        }
+      }
+
+      // ---------- Intro animation ----------
+      const introTextEl = document.getElementById("introText");
+      const introScene = document.getElementById("sceneIntro");
+
+      // Rendre la scène intro visible
+      setTimeout(() => {
+        introScene.classList.add("visible");
+        introTextEl.classList.add("visible");
+      }, 300);
+
+      // Laisser le texte visible plus longtemps
+      setTimeout(() => {
+        nextScene("sceneMemory", true);
+      }, 50);
+
+      // ---------- Memory ----------
       const images = [
         "image1.jpg",
         "image2.jpg",
-        "image3.jpeg",
+        "image3.jpg",
         "image4.jpeg",
         "image5.jpeg",
         "image6.jpeg",
       ];
       let cards = [...images, ...images].sort(() => Math.random() - 0.5);
-      const game = document.getElementById("game");
       let first = null,
         lock = false,
         pairs = 0;
+      const game = document.getElementById("game");
 
       cards.forEach((src) => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `<div class="card-inner">
-    <div class="card-face card-front"></div>
-    <div class="card-face card-back"><img src="${src}"></div>
-  </div>`;
-        card.addEventListener("click", () => flip(card, src));
-        game.appendChild(card);
+        const c = document.createElement("div");
+        c.className = "card";
+        c.innerHTML = `
+    <div class="card-inner">
+      <div class="card-face card-front"></div>
+      <div class="card-face card-back"><img src="${src}"></div>
+    </div>`;
+        c.addEventListener("click", () => flip(c, src));
+        game.appendChild(c);
       });
 
       function flip(card, src) {
@@ -280,13 +865,20 @@
           first.card.classList.add("matched");
           pairs++;
           reset();
-          if (pairs === images.length) nextScene("sceneCongrats");
+          if (pairs === images.length) {
+            // Show congrats overlay with confetti
+            setTimeout(() => {
+              const overlay = document.getElementById("congratsOverlay");
+              overlay.classList.add("visible");
+              confetti();
+            }, 500);
+          }
         } else {
           setTimeout(() => {
             card.classList.remove("flipped");
             first.card.classList.remove("flipped");
             reset();
-          }, 900);
+          }, 800);
         }
       }
       function reset() {
@@ -294,82 +886,139 @@
         lock = false;
       }
 
-      // ---------- Scene Transitions ----------
-      function nextScene(id) {
-        document
-          .querySelectorAll(".scene")
-          .forEach((s) => s.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
-      }
-
-      // Scene 2 button
-      document
-        .getElementById("next1")
-        .addEventListener("click", () => nextScene("sceneFlee"));
-
-      // ---------- Scene 3: Bouton qui fuit amélioré ----------
+      // ---------- Flee button ----------
       const fleeBtn = document.getElementById("fleeBtn");
-      let fleeInterval;
-      fleeBtn.addEventListener("mouseenter", startFlee);
-      fleeBtn.addEventListener("click", () => {
-        clearInterval(fleeInterval);
-        nextScene("sceneSanta");
+      let moveInterval;
+      let fleeSceneActive = false;
+
+      // Start animation when flee scene becomes active
+      const observer = new MutationObserver(() => {
+        const fleeScene = document.getElementById("sceneFlee");
+        if (fleeScene.classList.contains("active") && !fleeSceneActive) {
+          fleeSceneActive = true;
+          startFleeAnimation();
+        } else if (!fleeScene.classList.contains("active") && fleeSceneActive) {
+          fleeSceneActive = false;
+          clearInterval(moveInterval);
+        }
       });
 
-      function startFlee() {
-        clearInterval(fleeInterval);
-        fleeInterval = setInterval(() => {
-          let x = Math.random() * window.innerWidth - 80;
-          let y = Math.random() * window.innerHeight - 80;
-          fleeBtn.style.transform = `translate(${x}px, ${y}px)`;
-        }, 100);
+      observer.observe(document.getElementById("sceneFlee"), {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+
+      function startFleeAnimation() {
+        // Position initiale aléatoire
+        moveButton();
+
+        // Bouger le bouton rapidement
+        moveInterval = setInterval(() => {
+          moveButton();
+        }, 500);
       }
 
-      // ---------- Scene 4: Père Noël impatient ----------
-      const santaBtn = document.getElementById("santaBtn");
-      santaBtn.addEventListener("click", () => nextScene("sceneChoice"));
+      function moveButton() {
+        const btnWidth = 60;
+        const btnHeight = 60;
+        const margin = 20; // Marge de sécurité
 
-      // ---------- Scene 5: Faux choix ----------
-      document
-        .querySelectorAll(".choiceBtn")
-        .forEach((btn) =>
-          btn.addEventListener("click", () => nextScene("sceneCountdown"))
-        );
+        const maxX = window.innerWidth - btnWidth - margin;
+        const maxY = window.innerHeight - btnHeight - margin;
 
-      // ---------- Scene 6: Countdown ----------
-      const countdownEl = document.getElementById("countdown");
-      let count = 3;
-      function runCountdown() {
-        countdownEl.textContent = count;
-        const interval = setInterval(() => {
-          count--;
-          countdownEl.textContent = count;
-          if (count === 0) {
-            clearInterval(interval);
-            nextScene("sceneWinner");
-            launchConfetti(150);
-          }
-        }, 1000);
+        const x = Math.random() * (maxX - margin) + margin;
+        const y = Math.random() * (maxY - margin) + margin;
+
+        fleeBtn.style.left = x + "px";
+        fleeBtn.style.top = y + "px";
+        fleeBtn.style.transform = "none";
       }
-      document
-        .getElementById("sceneCountdown")
-        .addEventListener("transitionend", runCountdown);
+      fleeBtn.addEventListener("click", () => {
+        clearInterval(moveInterval);
 
-      // ---------- Confetti ----------
-      function launchConfetti(count) {
-        for (let i = 0; i < count; i++) {
-          const c = document.createElement("div");
-          c.className = "confetti";
-          c.style.left = Math.random() * 100 + "vw";
-          c.style.backgroundColor = ["#b11226", "#0f5132", "#d4af37"][
-            Math.floor(Math.random() * 3)
-          ];
-          c.style.width = c.style.height = Math.random() * 8 + 6 + "px";
-          c.style.animationDuration = Math.random() * 2 + 3 + "s";
-          document.body.appendChild(c);
-          setTimeout(() => c.remove(), 5000);
+        // Show success overlay
+        const overlay = document.getElementById("fleeSuccessOverlay");
+        overlay.classList.add("visible");
+        confetti();
+
+        // Changer de scène pendant que l'overlay est visible
+        setTimeout(() => {
+          // Changer la scène en arrière-plan sans fade
+          const currentScene = document.querySelector(".scene.active");
+          const nextSceneEl = document.getElementById("sceneSanta");
+
+          if (currentScene) currentScene.classList.remove("active", "visible");
+          nextSceneEl.classList.add("active", "visible");
+
+          // Ensuite faire disparaître l'overlay en fondu
+          setTimeout(() => {
+            overlay.classList.remove("visible");
+          }, 100);
+        }, 2500);
+      });
+
+      // ---------- Santa Progress Bar ----------
+      const santaProgressObserver = new MutationObserver(() => {
+        const santaScene = document.getElementById("sceneSanta");
+        const santaMessage1 = document.getElementById("santaMessage1");
+        const santaMessage2 = document.getElementById("santaMessage2");
+
+        if (santaScene.classList.contains("active")) {
+          // Message à 1/3 (10 secondes) - premier message apparaît
+          setTimeout(() => {
+            santaMessage1.textContent = "Encore un peu de patience... 😌";
+            santaMessage1.style.opacity = "1";
+          }, 10000);
+
+          // Message à 2/3 (20 secondes) - deuxième message apparaît en dessous
+          setTimeout(() => {
+            santaMessage2.textContent = "C'est long hein... 😏";
+            santaMessage2.style.opacity = "1";
+          }, 20000);
+
+          // Fin du chargement (30 secondes) - afficher l'overlay
+          setTimeout(() => {
+            santaMessage1.style.opacity = "0";
+            santaMessage2.style.opacity = "0";
+            const overlay = document.getElementById("santaSuccessOverlay");
+            overlay.classList.add("visible");
+            confetti();
+          }, 30000); // Match the progressFill animation duration
+        } else {
+          // Reset messages when leaving scene
+          santaMessage1.style.opacity = "0";
+          santaMessage1.textContent = "";
+          santaMessage2.style.opacity = "0";
+          santaMessage2.textContent = "";
         }
-      }
+      });
+
+      santaProgressObserver.observe(document.getElementById("sceneSanta"), {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+
+      // ---------- Countdown ----------
+      let count = 4;
+      const cd = document.getElementById("countdown");
+      const cdInterval = setInterval(() => {
+        if (
+          !document
+            .getElementById("sceneCountdown")
+            .classList.contains("active")
+        )
+          return;
+        count--;
+        cd.textContent = count;
+        if (count === 0) {
+          clearInterval(cdInterval);
+          // Petit délai pour effet dramatique avant le cadeau
+          setTimeout(() => {
+            nextScene("sceneWinner");
+            setTimeout(() => confetti(), 400); // Confetti après le début du fade-in
+          }, 500);
+        }
+      }, 1000);
     </script>
   </body>
 </html>
